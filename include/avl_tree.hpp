@@ -126,14 +126,7 @@ public:
           "AvlTree::iterator: prefix increment called on end iterator!"};
       }
 
-      Node* previous{m_node};
-
       increment(m_node);
-
-      if (m_node == previous) {
-        m_node = nullptr;
-      }
-
       return *this;
     }
 
@@ -158,14 +151,7 @@ public:
         return *this;
       }
 
-      Node* previous{m_node};
-
       decrement(m_node);
-
-      if (m_node == previous) {
-        m_node = nullptr;
-      }
-
       return *this;
     }
 
