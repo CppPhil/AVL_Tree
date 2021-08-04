@@ -27,9 +27,11 @@ target_include_directories(
   PRIVATE 
   ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-if (CMAKE_BUILD_TYPE MATCHES Debug)
-  target_compile_definitions(
-    ${APP_NAME}
-    PRIVATE
-    DEBUG_MODE)
+if (WIN32)
+  if (CMAKE_BUILD_TYPE MATCHES Debug)
+    target_compile_definitions(
+      ${APP_NAME}
+      PRIVATE
+      DEBUG_MODE)
+  endif()
 endif()
