@@ -1033,7 +1033,6 @@ AT_TEST(shouldBeAbleToPrefixDecrementEndIterator)
 {
   Tree           t{testTree()};
   Tree::iterator it{t.end()};
-  ;
   Tree::iterator it2{--it};
 
   AT_ASSERT_EQ(10, it->first);
