@@ -2,7 +2,7 @@
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
 #include <stdlib.h>
-#endif /* DEBUG_MODE */
+#endif /* DEDUG_MODE */
 
 #include <cctype>
 #include <cstddef>
@@ -13,9 +13,11 @@
 #include <iostream>
 #include <random>
 #include <string>
+#include <vector>
+
+#include "test_framework.hpp"
 
 #include "avl_tree.hpp"
-#include "test_framework.hpp"
 
 using namespace std::string_literals;
 
@@ -152,7 +154,8 @@ AT_TEST(shouldBeAbleToConstructFromInitializerList)
 |=====20 => 10
 |
 |
-|===========40 => 20)")};
+|===========40 => 20
+)")};
   AT_ASSERT_EQ(expectedTreeString, at::toString(t));
 }
 
@@ -193,7 +196,7 @@ AT_TEST(shouldBeAbleToCopyAssign)
     const Tree::mapped_type& value{keyValuePair.second};
 
     const Tree::iterator it{t2.find(key)};
-    AT_ASSERT_NE(t1.end(), it);
+    AT_ASSERT_NE(t2.end(), it);
     AT_ASSERT_EQ(key, it->first);
     AT_ASSERT_EQ(value, it->second);
   }
@@ -221,7 +224,8 @@ AT_TEST(shouldBeAbleToAssignWithInitializerList)
 |=====4 => 4
 |
 |
-|===========5 => 5)")};
+|===========5 => 5
+)")};
   AT_ASSERT_EQ(expected, at::toString(t));
 }
 
@@ -231,22 +235,19 @@ AT_TEST(shouldBeAbleToClear)
   t.clear();
   AT_ASSERT_EQ(0, t.size());
   AT_ASSERT_EQ(true, t.empty());
-  AT_ASSERT_EQ(t.begin(), t.end());
-  AT_ASSERT_EQ(t.rbegin(), t.rend());
 }
 
 AT_TEST(shouldBeAbleToInsertNewElement)
 {
   Tree t{testTree()};
-  const auto [it, wasInserted] = t.insert(11, 11);
+  auto [it, wasInserted] = t.insert(11, 11);
   AT_ASSERT_EQ(true, wasInserted);
   AT_ASSERT_NE(t.end(), it);
   AT_ASSERT_EQ(11, it->first);
   AT_ASSERT_EQ(11, it->second);
-  Tree::iterator iter{t.find(11)};
-  AT_ASSERT_NE(t.end(), iter);
-  AT_ASSERT_EQ(11, iter->first);
-  AT_ASSERT_EQ(11, iter->second);
+  Tree::iterator value{t.find(11)};
+  AT_ASSERT_NE(t.end(), value);
+  AT_ASSERT_EQ(11, value->second);
   AT_ASSERT_EQ(11, t.size());
   AT_ASSERT_EQ(false, t.empty());
 
@@ -289,11 +290,14 @@ AT_TEST(shouldBeAbleToInsertNewElement)
 AT_TEST(shouldDoNothingWhenInsertingAnElementThatAlreadyExists)
 {
   Tree t{testTree()};
-  const auto [it, wasInserted] = t.insert(1, 55);
+  auto [it, wasInserted] = t.insert(1, 55);
   AT_ASSERT_EQ(false, wasInserted);
   AT_ASSERT_NE(t.end(), it);
   AT_ASSERT_EQ(1, it->first);
   AT_ASSERT_EQ(1, it->second);
+  Tree::iterator p{t.find(1)};
+  AT_ASSERT_NE(t.end(), p);
+  AT_ASSERT_EQ(1, p->second);
   AT_ASSERT_EQ(10, t.size());
 }
 
@@ -319,6 +323,27 @@ AT_TEST(shouldBeAbleToInsertAnIteratorRange)
   AT_ASSERT_EQ(expected, actual);
 }
 
+AT_TEST(shouldBeAbleToInsertWithAnInitializerList)
+{
+  Tree t{};
+  t.insert(1, 1);
+  t.insert({{2, 2}, {3, 3}, {-5, -5}});
+
+  const std::string expected{trimmed(R"(
+|===========-5 => -5
+|
+|
+|=====1 => 1
+|
+|
+2 => 2
+|
+|
+|=====3 => 3)")};
+  const std::string actual{at::toString(t)};
+  AT_ASSERT_EQ(expected, actual);
+}
+
 AT_TEST(shouldBeAbleToInsertWithInsertOrAssign)
 {
   Tree                                  t{testTree()};
@@ -328,6 +353,7 @@ AT_TEST(shouldBeAbleToInsertWithInsertOrAssign)
   AT_ASSERT_EQ(0, pair.first->first);
   AT_ASSERT_EQ(0, pair.first->second);
 
+  const std::string actual{at::toString(t)};
   const std::string expected{trimmed(R"(
 |=================0 => 0
 |
@@ -360,8 +386,6 @@ AT_TEST(shouldBeAbleToInsertWithInsertOrAssign)
 |
 |
 |=================10 => 10)")};
-  const std::string actual{at::toString(t)};
-
   AT_ASSERT_EQ(expected, actual);
 }
 
@@ -410,9 +434,7 @@ AT_TEST(shouldBeAbleToErase)
 |
 |
 |===========10 => 10)")};
-  const std::string actual{at::toString(t)};
-
-  AT_ASSERT_EQ(expected, actual);
+  AT_ASSERT_EQ(expected, at::toString(t));
 }
 
 AT_TEST(shouldBeAbleToEraseLastElement)
@@ -492,48 +514,57 @@ AT_TEST(shouldDoNothingWhenErasingNonExistantKey)
 |
 |
 |=================10 => 10)")};
+  const std::string actual{at::toString(t)};
 
-  AT_ASSERT_EQ(expected, at::toString(t));
+  AT_ASSERT_EQ(expected, actual);
+}
+
+AT_TEST(shouldDoNothingWhenErasingFromAnEmptyTree)
+{
+  Tree                 t{};
+  const Tree::iterator it{t.erase(1)};
+
+  AT_ASSERT_EQ(t.end(), it);
 }
 
 AT_TEST(shouldBeAbleToSwap)
 {
   Tree t1{testTree()};
-  Tree t2{{1, 1}, {2, 2}, {3, 3}};
+  Tree t2{};
+  t2.insert(1, 1);
+  t2.insert(2, 2);
+  t2.insert(3, 3);
   swap(t1, t2);
 
   AT_ASSERT_EQ(10, t2.size());
   AT_ASSERT_EQ(3, t1.size());
 
   for (int i{1}; i <= 10; ++i) {
-    const Tree::iterator it{t2.find(i)};
-    AT_ASSERT_NE(t2.end(), it);
-    AT_ASSERT_EQ(i, it->first);
-    AT_ASSERT_EQ(i, it->second);
+    Tree::iterator p{t2.find(i)};
+    AT_ASSERT_NE(t2.end(), p);
+    AT_ASSERT_EQ(i, p->second);
   }
 
   for (int i{1}; i <= 3; ++i) {
-    const Tree::iterator it{t1.find(i)};
-    AT_ASSERT_NE(t1.end(), it);
-    AT_ASSERT_EQ(i, it->first);
-    AT_ASSERT_EQ(i, it->second);
+    Tree::iterator p{t1.find(i)};
+    AT_ASSERT_NE(t1.end(), p);
+    AT_ASSERT_EQ(i, p->second);
   }
 }
 
 AT_TEST(shouldBeAbleToFindByKey)
 {
-  const Tree                 t{testTree()};
-  const Tree::const_iterator it{t.find(4)};
-  AT_ASSERT_NE(t.end(), it);
-  AT_ASSERT_EQ(4, it->first);
-  AT_ASSERT_EQ(4, it->second);
+  const Tree           t{testTree()};
+  Tree::const_iterator p{t.find(4)};
+  AT_ASSERT_NE(t.end(), p);
+  AT_ASSERT_EQ(4, p->second);
 }
 
 AT_TEST(shouldNotBeAbleToFindNonExistantKey)
 {
-  const Tree                 t{testTree()};
-  const Tree::const_iterator it{t.find(11)};
-  AT_ASSERT_EQ(t.end(), it);
+  const Tree           t{testTree()};
+  Tree::const_iterator p{t.find(11)};
+  AT_ASSERT_EQ(t.end(), p);
 }
 
 AT_TEST(shouldBeAbleToIterateForwardUsingIterators)
@@ -744,7 +775,7 @@ AT_TEST(shouldBeAbleToPostfixIterateBackwardsUsingReverseIterators)
 
   Tree::reverse_iterator it{t.rend()};
 
-  for (Tree::reverse_iterator begin{t.rbegin()}; it != begin; it--) {
+  for (Tree::reverse_iterator begin{t.rbegin()}; it != begin; it++) {
     if (it != t.rend()) {
       AT_ASSERT_EQ(i, it->first);
       AT_ASSERT_EQ(i, it->second);
@@ -784,7 +815,7 @@ AT_TEST(shouldBeAbleToPostfixIterateBackwardsUsingConstReverseIterators)
 
   Tree::const_reverse_iterator it{t.rend()};
 
-  for (Tree::const_reverse_iterator begin{t.rbegin()}; it != begin; it--) {
+  for (Tree::const_reverse_iterator begin{t.rbegin()}; it != begin; it++) {
     if (it != t.rend()) {
       AT_ASSERT_EQ(i, it->first);
       AT_ASSERT_EQ(i, it->second);
@@ -941,6 +972,7 @@ AT_TEST(shouldThrowWhenPostfixIncrementingEndIterator)
   try {
     Tree::iterator it1{t.end()};
     Tree::iterator it2{it1++};
+    AT_ASSERT_EQ(true, false);
   }
   catch (const std::runtime_error& ex) {
     AT_ASSERT_EQ(
@@ -1006,7 +1038,7 @@ AT_TEST(shouldBeAbleToPostfixIncrementIteratorsWithTwoElements)
   AT_ASSERT_EQ(4, it5->second);
 }
 
-AT_TEST(shouldeBeAbleToPrefixDecrementIterators)
+AT_TEST(shouldBeAbleToPrefixDecrementIterators)
 {
   Tree           t{testTree()};
   Tree::iterator it{t.end()};
@@ -1564,7 +1596,11 @@ AT_TEST(shouldBeAbleToPostfixDecrementReverseIteratorInTheMiddle)
 
 AT_TEST(shouldBeAbleToPrintTree)
 {
-  Tree t{{1, 1}, {2, 2}, {3, 3}, {4, 4}};
+  Tree t{};
+
+  for (int i{1}; i <= 4; ++i) {
+    t.insert(i, i);
+  }
 
   const std::string expected{trimmed(R"(
 |=====1 => 1
@@ -1601,8 +1637,7 @@ AT_TEST(shouldPerformRotationsCorrectly)
 N => N
 |
 |
-|=====O => O
-  )")};
+|=====O => O)")};
   AT_ASSERT_EQ(expectedLeftRotate, at::toString(t));
 
   t.insert('L', 'L');
@@ -1621,8 +1656,7 @@ N => N
 N => N
 |
 |
-|=====O => O
-  )")};
+|=====O => O)")};
   AT_ASSERT_EQ(expectedRightRotate, at::toString(t));
 
   t.insert('Q', 'Q');
@@ -1647,8 +1681,7 @@ N => N
 |=====P => P
 |
 |
-|===========Q => Q
-  )")};
+|===========Q => Q)")};
   AT_ASSERT_EQ(expectedRightLeftRotate, at::toString(t));
 
   t.insert('H', 'H');
@@ -1679,8 +1712,7 @@ N => N
 |=====P => P
 |
 |
-|===========Q => Q
-  )")};
+|===========Q => Q)")};
   AT_ASSERT_EQ(expectedLeftRightRotate, at::toString(t));
 
   t.insert('A', 'A');
@@ -1713,8 +1745,7 @@ N => N
 |=====P => P
 |
 |
-|===========Q => Q
-  )")};
+|===========Q => Q)")};
   AT_ASSERT_EQ(expectedRightRotateEnd, at::toString(t));
 }
 
@@ -1837,7 +1868,7 @@ AT_TEST(shouldBeAbleToSustainRandomizedTest)
 AT_TEST(shouldBeAbleToSustainRandomizedTestWithNoInitialValues)
 {
   std::mt19937_64                    urbg{createURBG()};
-  Tree                               t{};
+  Tree                               t{testTree()};
   std::uniform_int_distribution<int> dist{0, 4};
   std::uniform_int_distribution<int> valueDist{0, 10'000};
 
@@ -1882,7 +1913,7 @@ AT_TEST(shouldSustainRandomizedIteratorTest)
 
     Tree t{};
 
-    for (int i{0}; i < valuesToGenerate; ++i) {
+    for (int k{0}; k < valuesToGenerate; ++k) {
       const int value{dist(urbg)};
       t.insert(value, value);
     }
@@ -1930,7 +1961,6 @@ AT_TEST(shouldSustainRandomizedIteratorTest)
 }
 
 namespace at {
-namespace {
 [[nodiscard]] int runAllTests()
 {
   std::string_view currentFunctionName{"NO FUNCTION"};
@@ -1947,36 +1977,39 @@ namespace {
       ++testCase;
     }
 
-    std::cout << ">>>> All tests ran successfully.\n";
+    std::cout << ">>>>> All tests ran successfully.\n";
 
     return EXIT_SUCCESS;
   }
   catch (const TestFailureException& exception) {
-    std::cerr << '\n'
-              << exception.what()
-              << "\n\n\n>>>>>>>>>>> TEST FAILURE <<<<<<<<<\n\n";
+    std::cerr
+      << '\n'
+      << exception.what()
+      << "\n\n\n>>>>>>>>>>>>>>>>>>>>>> TEST FAILURE <<<<<<<<<<<<<<<\n\n";
     return EXIT_FAILURE;
   }
   catch (const std::runtime_error& runtimeError) {
-    std::cerr << "Caught std::runtime_error: " << runtimeError.what()
-              << "\nfunction: " << currentFunctionName << '\n'
-              << "\n\n\n>>>>>>>>>>> TEST FAILURE <<<<<<<<<\n\n";
+    std::cerr
+      << "Caught std::runtime_error: " << runtimeError.what()
+      << "\nfunction: " << currentFunctionName << '\n'
+      << "\n\n\n>>>>>>>>>>>>>>>>>>>>>> TEST FAILURE <<<<<<<<<<<<<<<\n\n";
     return EXIT_FAILURE;
   }
   catch (const std::exception& exception) {
-    std::cerr << "Caught std::exception: " << exception.what()
-              << "\nfunction: " << currentFunctionName << '\n'
-              << "\n\n\n>>>>>>>>>>> TEST FAILURE <<<<<<<<<\n\n";
+    std::cerr
+      << "Caught std::expection: " << exception.what()
+      << "\nfunction: " << currentFunctionName << '\n'
+      << "\n\n\n>>>>>>>>>>>>>>>>>>>>>> TEST FAILURE <<<<<<<<<<<<<<<\n\n";
     return EXIT_FAILURE;
   }
   catch (...) {
-    std::cerr << "Unknown error caught!"
-              << "\nfunction: " << currentFunctionName << '\n'
-              << "\n\n\n>>>>>>>>>>> TEST FAILURE <<<<<<<<<\n\n";
+    std::cerr
+      << "Unknown error caught!"
+      << "\nfunction: " << currentFunctionName << '\n'
+      << "\n\n\n>>>>>>>>>>>>>>>>>>>>>> TEST FAILURE <<<<<<<<<<<<<<<\n\n";
     return EXIT_FAILURE;
   }
 }
-} // anonymous namespace
 } // namespace at
 
 int main()
@@ -1993,7 +2026,7 @@ int main()
   _CrtMemCheckpoint(&s2);
 
   if (_CrtMemDifference(&s3, &s1, &s2)) {
-    std::cerr << "\n\n>>>>>>>> Memory leaks detected <<<<<<<\n";
+    std::cerr << "\n\n>>>>>>>>>>>>> Memory leaks detected <<<<<<<<<\n";
     _CrtMemDumpStatistics(&s3);
     return testsExitCode | EXIT_FAILURE;
   }

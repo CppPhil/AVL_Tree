@@ -1,5 +1,4 @@
-#ifndef INCG_AVL_TREE_HPP
-#define INCG_AVL_TREE_HPP
+#pragma once
 #ifdef DEBUG_MODE
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
@@ -9,8 +8,7 @@
 #define DBG_NEW new
 #endif
 
-#include <cmath>
-#include <cstdint>
+#include <cstddef>
 
 #include <algorithm>
 #include <functional>
@@ -451,7 +449,10 @@ public:
     constexpr bool dontReplace{false};
     m_root
       = insertImpl(key, value, m_root, &nodeInserted, &didInsert, dontReplace);
-    m_root->parent = nullptr;
+
+    if (m_root != nullptr) {
+      m_root->parent = nullptr;
+    }
 
     if (didInsert) {
       ++m_nodeCount;
@@ -488,7 +489,10 @@ public:
     constexpr bool doReplace{true};
     m_root
       = insertImpl(key, value, m_root, &nodeInserted, &didInsert, doReplace);
-    m_root->parent = nullptr;
+
+    if (m_root != nullptr) {
+      m_root->parent = nullptr;
+    }
 
     if (didInsert) {
       ++m_nodeCount;
@@ -541,12 +545,12 @@ public:
       }
     }
 
-    return end(); // Didn't find it.
+    return end();
   }
 
   const_iterator find(const key_type& key) const
   {
-    return const_iterator{const_cast<this_type*>(this)->find(key)};
+    return const_cast<this_type*>(this)->find(key);
   }
 
 private:
@@ -575,9 +579,19 @@ private:
 
   void copy(const this_type& other)
   {
-    for (const value_type& keyValuePair : other) {
-      insert(keyValuePair);
+    copy_impl(other.m_root);
+  }
+
+  void copy_impl(Node* other)
+  {
+    if (other == nullptr) {
+      return;
     }
+
+    insert(other->keyValuePair);
+
+    copy_impl(other->left);
+    copy_impl(other->right);
   }
 
   void destroyTree(Node* node)
@@ -608,13 +622,17 @@ private:
     }
 
     const ssize_type rightHeight{heightOf(node->right)};
-    const ssize_type leftHeight{heightOf(node->left)};
+    const ssize_type leftHeigth{heightOf(node->left)};
 
-    return leftHeight - rightHeight;
+    return leftHeigth - rightHeight;
   }
 
   Node* rotateRight(Node* node)
   {
+    if (node == nullptr) {
+      return nullptr;
+    }
+
     Node* left{node->left};
     Node* leftRight{left->right};
     left->right = node;
@@ -637,6 +655,10 @@ private:
 
   Node* rotateLeft(Node* node)
   {
+    if (node == nullptr) {
+      return nullptr;
+    }
+
     Node* right{node->right};
     Node* rightLeft{right->left};
 
@@ -678,14 +700,14 @@ private:
   Node* detachNode(Node*& node)
   {
     if (node->left == nullptr && node->right == nullptr) {
-      // No children
+      // No children.
       Node* detached{node};
       node = nullptr;
       return detached;
     }
 
     if (node->left != nullptr && node->right != nullptr) {
-      // Two children
+      // Two children.
       Node* replacement{detachLeftmostNode(node->right)};
 
       replacement->left   = node->left;
@@ -719,30 +741,36 @@ private:
 
     // Left Left => rotate right
     // left height (2) - right height (0) == 2
-    // left child has a left height of 1 and a right height of 0 -> 1 (because 1
-    // - 0 == 1)
+    // left child has a left height of 1 and right height of 0 -> 1 (because 1 -
+    // 0 == 1)
     if (balanceFactor == 2 && calculateBalanceFactor(node->left) == 1) {
       return rotateRight(node);
     }
 
     // Right Left => rotate right left
-    // left height (0) - right height (2) == -2
-    // right child has a left height of 1 and a right height of 0 -> 1 (because
-    // 1 - 0 == 1)
+    // left height (0) - rigth height (2) == -2
+    // right child has a left height of 1 and right height of 0 -> 1 (because 1
+    // - 0 == 1)
     if (balanceFactor == -2 && calculateBalanceFactor(node->right) == 1) {
-      node->right         = rotateRight(node->right);
-      node->right->parent = node;
+      node->right = rotateRight(node->right);
+
+      if (node->right != nullptr) {
+        node->right->parent = node;
+      }
 
       return rotateLeft(node);
     }
 
     // Left Right => rotate left right
     // left height (2) - right height (0) == 2
-    // left child has a left height of 0 and right height of 1 -> -1 (because 0
-    // - 1 == -1)
+    // left child has a left height of 0 and a right height of 1 -> -1 (because
+    // 0 - 1 == -1)
     if (balanceFactor == 2 && calculateBalanceFactor(node->left) == -1) {
-      node->left         = rotateLeft(node->left);
-      node->left->parent = node;
+      node->left = rotateLeft(node->left);
+
+      if (node->right != nullptr) {
+        node->left->parent = node;
+      }
 
       return rotateRight(node);
     }
@@ -820,7 +848,10 @@ private:
         insertedOrPreventedInsertion,
         didInsert,
         shouldReplace);
-      node->right->parent = node;
+
+      if (node->right != nullptr) {
+        node->right->parent = node;
+      }
     }
     else if (AT_CMPKEY(key, node->key())) { // If key < node.key -> go left
       node->left = insertImpl(
@@ -830,7 +861,10 @@ private:
         insertedOrPreventedInsertion,
         didInsert,
         shouldReplace);
-      node->left->parent = node;
+
+      if (node->left != nullptr) {
+        node->left->parent = node;
+      }
     }
     else { // It's already there.
       *insertedOrPreventedInsertion = node;
@@ -852,7 +886,7 @@ private:
   size_type m_nodeCount;
 };
 
-#undef AT_COMP_KEY
+#undef AT_CMPKEY
 
 template<typename Key, typename T, typename Compare = std::less<Key>>
 void swap(AvlTree<Key, T, Compare>& lhs, AvlTree<Key, T, Compare>& rhs) noexcept
@@ -860,4 +894,3 @@ void swap(AvlTree<Key, T, Compare>& lhs, AvlTree<Key, T, Compare>& rhs) noexcept
   lhs.swap(rhs);
 }
 } // namespace at
-#endif // INCG_AVL_TREE_HPP

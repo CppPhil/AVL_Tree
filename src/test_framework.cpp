@@ -37,7 +37,7 @@ std::string TestFailureException::formatMessage(
                         "Expected:\n"
                      << expectedResult
                      << "\n"
-                        "Actual  : \n"
+                        "Actual  :\n"
                      << actualResult << "\n\n";
 
   return outputStringStream.str();

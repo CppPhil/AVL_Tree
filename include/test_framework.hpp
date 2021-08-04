@@ -1,15 +1,12 @@
-#ifndef INCG_AT_TEST_FRAMEWORK_HPP
-#define INCG_AT_TEST_FRAMEWORK_HPP
+#pragma once
 #include <cstdint>
 
-#include <iostream>
 #include <locale>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
-#include <vector>
 
 #include "avl_tree.hpp"
 
@@ -104,4 +101,3 @@ struct TestFunctionWithIdentifier {
   testIdentifier##Class testIdentifier##instance{};                          \
   void                  testIdentifier()
 } // namespace at
-#endif // INCG_AT_TEST_FRAMEWORK_HPP
